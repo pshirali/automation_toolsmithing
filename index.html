@@ -1,0 +1,481 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<title>Acceptance Test Automation</title>
+		<meta name="description" content="Acceptance Test Automation">
+		<meta name="author" content="Praveen Shirali">
+
+		<link rel="stylesheet" href="css/reveal.css">
+		<link rel="stylesheet" href="css/theme/night.css">
+
+		<!-- Theme used for syntax highlighting of code -->
+		<link rel="stylesheet" href="lib/css/zenburn.css">
+
+		<style type="text/css">
+			.red { color: indianred; }
+			.green { color: yellowgreen; }
+			.blue { color: steelblue; }
+			.peru { color: peru; }
+			.tan { color: tan; }
+			h3.heading { font-size: 120%; }
+			h3.peru { color: peru; text-align: left; }
+			h3.tan { color: tan; text-align: left; }
+			h3.red { color: indianred; text-align: left; }
+		</style>
+
+		<!-- Printing and PDF exports -->
+		<script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+		</script>
+	</head>
+	<body>
+		<div class="reveal">
+			<div class="slides">
+				<section>
+					<h3 style="color: khaki">Automation Toolsmithing</h3>
+					<h3 style="color: khaki">and Maintenance in Python</h3>
+					<h3 class="heading" style="color: gray">(For Acceptance Tests and Beyond)</h3>
+					<p style="font-weight: bold; margin-top: 5%; color: peru">Praveen Shirali</p>
+					<p style="font-size: 75%; color: tan;">Test Architect, RiptideIO</p>
+					<p style="font-size: 50%; color: khaki; margin-top:5%">BangPypers MeetUp - August 20th 2016, Bangalore, India.</p>
+				</section>
+				<section>
+					<h3 class="heading">This presentation IS NOT about:</h3>
+					<ul>
+						<li class="bullet red">How to write tests in python</li>
+						<li class="bullet red">Which test methodology to use</li>
+						<li class="bullet red">Which framework to use</li>
+					</ul>
+				</section>
+				<section>
+					<h3 class="heading">This presentation IS about:</h4>
+					<ul>
+						<li class="bullet green">Building general-purpose tools for automation</li>
+						<li class="bullet green">Extending them to suite your product under test</li>
+						<li class="bullet green">Maintaining it as your product grows</li>
+						<li class="bullet green">Adding more such tools to your 'suite'</li>
+					</ul>
+				</section>
+				<section>
+					<h3 class="heading">Layers of testing:</h3>
+					<ul>
+						<li class="fragment" data-fragment-index="1">
+							<span class="fragment green" data-fragment-index="1">
+							    Unit tests
+							</span>
+						</li>
+						<li class="fragment" data-fragment-index="2">
+							<span class="fragment blue" data-fragment-index="2">
+								Acceptance tests
+							</span>
+						</li>
+						<li class="fragment" data-fragment-index="2">
+							<span class="fragment blue" data-fragment-index="2">
+								End to end tests
+							</span>
+						</li>
+						<li class="fragment" data-fragment-index="2">
+							<span class="fragment blue" data-fragment-index="2">
+								Performance tests
+							</span>
+						</li>
+						<li class="fragment" data-fragment-index="2">
+							<span class="fragment blue" data-fragment-index="2">
+								Scalability tests
+							</span>
+						</li>
+						<li class="fragment" data-fragment-index="2">
+							<span class="fragment blue" data-fragment-index="2">
+								... and beyond!
+							</span>
+						</li>
+					</ul>
+				</section>
+				<section data-transition="zoom">
+					<h3 class="heading">In this talk we'll look at</h3>
+					<h2 style="color: peru">Acceptance tests</h2>
+					<h3 class="heading">and beyond...</h3>
+				</section>
+
+ 				<section>
+					<h3 class="red">Ground rules</h3>
+					<ul>
+						<li class="bullet">
+							Separate 'automation' from 'testing'
+							<i style="color: tan; font-weight: italic">
+							<br>automation = how you exercise functionality in an automated way
+							<br>testing = how you verify results
+							</i>
+						</li>
+						<li class="bullet">
+							Automation code should go into a test-library
+						</li>
+						<li class="bullet">
+							Testcase should comprise of test logic. It calls automation code, unaware of how it is performed.
+						</li>
+						<li class="bullet">
+							Testcode and automation code command the same respect as product code.
+						</li>
+					</ul>
+				</section>
+
+				<section>
+					<h3 class="peru">Where to begin automation?</h3>
+					<ul>
+						<li class="bullet">
+							Identify the fastest way for your product to get to an isolated test-ready state.
+							<i style="color: tan; font-weight: italic">(process?, VM?, container?)</i>
+						</li>
+						<li class="bullet">
+							Identify interactions.
+							<i style="color: tan; font-weight: italic">(humans?, machines?)</i>
+						</li>
+						<li class="bullet">
+							Identify interface.
+							<i style="color: tan; font-weight: italic">(cli?, webAPI?, UI?, other I/O devices?)</i>
+						</li>
+						<li class="bullet">
+							Brainstorm use-cases, tests for best Return-On-Investment (ROI).
+						</li>
+					</ul>
+				</section>
+
+				<section>
+					<h3 class="tan">Your first wrapper library</h3>
+					<ul>
+						<li class="bullet">
+							Choose a library or a tool as a starting point.<br>
+							<b style="color: yellowgreen">Example:</b>
+							<i style="color: tan; font-weight: italic"> For product test deployment and management. (subprocess?, vm-sdks?, docker?...)</i>
+						</li>
+						<li class="bullet">
+							Write a class with basic methods to wrap this library or tool for generic use.
+							<pre><code class="hljs" data-trim>
+class Product(object):
+	def __init__(self, **config):
+		# consumes config based on which the product is launched
+	def start(self):
+		# starts the product; may be subprocess.Popen, may be docker run...
+	def is_alive(self):
+		# returns a bool on whether the product is running
+	def stop(self):
+		# stops the product
+							</code></pre>
+						</li>
+						<li class="bullet">
+							You've just built your wrapper lib. Version it. Test it. Maintain it.
+						</li>
+					</ul>
+				</section>
+
+				<section>
+					<h3 class="peru">Extending the wrapper library</h3>
+					<ul>
+						<li class="bullet">
+							Extend the wrapper to suit 'your' product by adding additional methods.<br>
+							<b style="color: yellowgreen">Example:</b>
+							<i style="color: tan; font-weight: italic"> Your product stores logs, depends on a DB?</i>
+							<pre><code class="hljs" data-trim>
+class MyProduct(Product, MyDatabase):	# mixin
+	def __init__(self, **config):
+	def start(self):
+	def is_alive(self):
+	def stop(self):
+	...
+	def delete_log_files(self):	# implmemented by MyProduct
+	def reset_database(self):	# inherited from MyDatabase
+	def cleanup(self): 		# calls the above two methods
+							</code></pre>
+						</li>
+					</ul>
+				</section>
+			</section>
+
+			<section>
+				<h3 class="red">Mashing functionality based on common usage patterns</h3>
+				<ul>
+					<li class="bullet">
+						Build wrappers around functionality that can work together.<br>
+						<b style="color: yellowgreen">Example:</b>
+						<i style="color: tan; font-weight: italic"> Mashup of a HTTP client and a response validator</i>
+						<br>
+						Given a route to an endpoint, the HTTP client knows which validator to invoke on the result.
+						When a difference is found, it generates a diff of expected and actual responses.
+					</li>
+					<li class="bullet">
+						API is simplified.
+					</li>
+					<li class="bullet">
+						Only one place needs a change if a different functionality is desired.
+					</li>
+				</ul>
+			</section>
+
+			<section>
+				<h3 class="peru">APIs should always be simple -- hidden costs of APIs</h3>
+				<ul>
+					<li class="bullet">
+						Modification required at all places where an API is called. Prone to mistakes.
+					</li>
+					<li class="bullet">
+						Hard to mentally track changes to APIs. Unlearning and relearning APIs is a pain.
+					</li>
+					<li class="bullet">
+						API Documentation. Simpler APIs speak for themselves. Very little documentation required.
+					</li>
+				</ul>
+			</section>
+
+			<section>
+				<h3 class="red">Choose your test framework wisely</h3>
+				<ul>
+					<li class="bullet">
+						Will your test code be python code or plain-text? (gherkin, DSL?)
+					</li>
+					<li class="bullet">
+						You may be limited by features and bugs in what the test framework provides.
+					</li>
+					<li class="bullet">
+						The test framework also decides the interface between the test library and the tests
+					</li>
+				</ul>
+			</section>
+
+			<section>
+				<h3 class="tan">Your test-library is king</h3>
+				<ul>
+					<li class="bullet">
+						Automation is not purely for tests alone. Think of simulations, long-running soak tests etc.
+					</li>
+					<li class="bullet">
+						Consider an interactive python console to test-library APIs for quick hacks.
+					</li>
+					<li class="bullet">
+						Handle CLI argument parsing through your test-library. Not through the test framework.
+					</li>
+					<li class="bullet">
+						Launch the test-framework through your own script.
+					</li>
+				</ul>
+			</section>
+
+			<section>
+				<h3 class="red">Avoid fixture hell</h3>
+				<ul>
+					<li class="bullet">
+						Fixture hell = mentally losing track of what a given fixture does
+					</li>
+					<li class="bullet">
+						Keep fixtures close to your test code.
+					</li>
+					<li class="bullet">
+						Pack common setup and teardown patterns into the test library.
+					</li>
+				</ul>
+			</section>
+
+			<section>
+				<h3 class="tan">Build a namespace of objects</h3>
+				<ul>
+					<li class="bullet">
+						You only need to deal with one object, which is a nested attribute tree to other objects.
+					</li>
+					<li class="bullet">
+						You could use dependency-injection frameworks like SpringPython or just subclass from dict!
+					</li>
+					<li class="bullet">
+						Test cases get immunity from changes to the test-library
+					</li>
+				</ul>
+			</section>
+
+			<section>
+				<h3 class="peru">Namespace example using dict -- Implementation</h3>
+							<pre><code class="hljs" data-trim>
+import json
+
+class Dict(dict):
+
+    def __init__(self, *args, **kwargs):
+        super(Dict, self).__init__(*args, **kwargs)
+
+    def __setattr__(self, attr, value):
+        self[attr] = value
+
+    def __getattr__(self, attr):
+        return self[attr]
+
+    def __hasattr__(self, attr):
+        return True if attr in self else False
+
+    def __repr__(self):
+        return json.dumps(self, indent=4, sort_keys=True, default=repr)
+							</code></pre>
+			</section>
+
+			<section>
+				<h3 class="red">Namespace example using dict -- Usage</h3>
+							<pre><code class="hljs" data-trim>
+d = Dict(one="ONE", two="TWO")
+d.three = "THREE"
+d.four = Dict(nested_four="NESTED_FOUR")
+
+>>> print d
+{
+    "four": {
+        "nested_four": "NESTED_FOUR"
+    },
+    "one": "ONE",
+    "three": "THREE",
+    "two": "TWO"
+}
+
+>>> print d.four.nested_four
+NESTED_FOUR
+							</code></pre>
+			</section>
+
+			<section>
+				<h3 class="peru">Namespace example using dict -- Extended</h3>
+							<pre><code class="hljs" data-trim>
+n = Namespace()
+n.set("parent.child.grandchild", MyClass())
+
+>>> n.parent
+{
+	"child": {
+		"grandchild": {{instance of MyClass}}
+	}
+}
+
+>>> print d.four.nested_four
+NESTED_FOUR
+							</code></pre>
+			</section>
+
+			<section>
+				<h3 class="tan">Rely on logging</h3>
+				<ul>
+					<li class="bullet">
+						Python logger is insanely awesome. Use it as much as possible.
+					</li>
+					<li class="bullet">
+						Override the __repr__ in the classes you define. Let the instance tell you its data.
+					</li>
+					<li class="bullet">
+						Testing is meant to be debug-friendly. Make every attempt to keep things readable.
+					</li>
+					<li class="bullet">
+						Quick turn around time matters a lot with in-field issues. Prepare for it in advance.
+					</li>
+				</ul>
+			</section>
+
+			<section>
+				<h3 class="peru">Automated data generation</h3>
+				<ul>
+					<li class="bullet">
+						Use a library to generate planned or random test data.<br>
+						<b style="color: yellowgreen">Example:</b>
+						<i style="color: tan; font-weight: italic"> hypothesis</i>
+					</li>
+					<li class="bullet">
+						When you know your data models, its easy to build equivalence classes and generate test data.
+					</li>
+					<li class="bullet">
+						Parametrize data. Implement the code to generate data in your test-library.
+					</li>
+					<li class="bullet">
+						Test with insanely large values, wrong datatypes, magic strings etc
+					</li>
+				</ul>
+			</section>
+
+			<section>
+				<h3 class="red">And, always plan for the following ...</h3>
+				<ul>
+					<li class="bullet">
+						Parallelization of test execution (with replicated test environments)
+					</li>
+					<li class="bullet">
+						Replacement of 1st line libraries which you wrapped initially.
+					</li>
+					<li class="bullet">
+						Maintenance of the test library for multiple version of your product
+					</li>
+				</ul>
+			</section>
+
+			<section>
+				<h3 class="peru">... cool stuff you could consider doing</h3>
+				<ul>
+					<li class="bullet">
+						Use tagging. Build reports on features covered, issues fixed, verified etc.
+					</li>
+					<li class="bullet">
+						Automatically scale testruns horizontally with additional resources.
+					</li>
+					<li class="bullet">
+						Tag defect IDs. Pull defect status and automatically regress fixed issues.
+					</li>
+				</ul>
+			</section>
+
+			<section>
+				<h3 class="tan">Some essential reading</h3>
+				<ul>
+					<li class="bullet">
+						<b style="color: yellowgreen">How to design a good API and why it matters</b>
+						Google Tech Talks, January 24, 2007
+						<i style="color: tan; font-weight: italic">https://www.youtube.com/watch?v=aAb7hSCtvGw</i>
+					</li>
+					<li class="bullet">
+						<b style="color: yellowgreen">Zen and the art of automated test suite maintenance</b>
+						John Ferguson Smart, June 13, 2013
+						<i style="color: tan; font-weight: italic">http://www.slideshare.net/wakaleo/zen-and-the-art-of-automated-acceptance-test-suite-maintenance</i>
+					</li>
+					<li class="bullet">
+						<b style="color: yellowgreen">Automated Testing Patterns and Smells</b>
+						Google Tech Talks, March 6, 2008
+						<i style="color: tan; font-weight: italic">https://www.youtube.com/watch?v=Pq6LHFM4JvE</i>
+					</li>
+				</ul>
+			</section>
+
+			<section>
+				<h3 class="heading">Q&amp;A, feedback...</h3><br>
+				<b style="color: peru">Praveen Shirali</b><br>
+				<b style="color: tan">praveengshirali@gmail.com</b>
+			</section>
+
+			</div>
+		</div>
+
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.js"></script>
+
+		<script>
+			// More info https://github.com/hakimel/reveal.js#configuration
+			Reveal.initialize({
+				history: true,
+				slideNumber: true,
+				transitionSpeed: 'fast',
+				transition: 'convex',
+				// More info https://github.com/hakimel/reveal.js#dependencies
+				dependencies: [
+					{ src: 'plugin/markdown/marked.js' },
+					{ src: 'plugin/markdown/markdown.js' },
+					{ src: 'plugin/notes/notes.js', async: true },
+					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }
+				]
+			});
+		</script>
+	</body>
+</html>
